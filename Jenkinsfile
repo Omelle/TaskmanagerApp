@@ -15,21 +15,18 @@ pipeline {
         }
 
         stage('Analyse SonarQube') {
+            options {
+                timeout(time: 10, unit: 'MINUTES') // Timeout généreux pour éviter les blocages
+            }
             steps {
                 withSonarQubeEnv('MonServeurSonar') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         script {
-                            // Définir la commande SonarQube
-                            def scannerCmd = "${SONAR_SCANNER}/bin/sonar-scanner -Dsonar.login=$SONAR_TOKEN"
-
-                            // Tentative d'exécution du scanner
-                            try {
-                                sh scannerCmd
-                            } catch (Exception e) {
-                                // En cas d'échec, arrêter le pipeline et afficher l'erreur
-                                currentBuild.result = 'FAILURE'
-                                error "SonarQube analysis failed: ${e.getMessage()}"
-                            }
+                            // Exécuter l’analyse Sonar avec la variable d’environnement SONAR_TOKEN
+                            sh """
+                                export SONAR_TOKEN=${SONAR_TOKEN}
+                                ${SONAR_SCANNER}/bin/sonar-scanner
+                            """
                         }
                     }
                 }
@@ -39,8 +36,9 @@ pipeline {
         stage('Construire l’image Docker') {
             steps {
                 script {
-                    // Construction de l'image Docker
-                    sh 'docker build -t $DOCKER_IMAGE:$BUILD_NUMBER -f backend/Dockerfile .'
+                    sh """
+                        docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} -f backend/Dockerfile .
+                    """
                 }
             }
         }
@@ -48,18 +46,16 @@ pipeline {
         stage('Pousser sur Docker Hub') {
             steps {
                 script {
-                    // Pousser l'image Docker sur Docker Hub
-                    withDockerRegistry([credentialsId: "$DOCKER_CREDENTIALS", url: ""]) {
-                        sh 'docker push $DOCKER_IMAGE:$BUILD_NUMBER'
+                    withDockerRegistry([credentialsId: "${DOCKER_CREDENTIALS}", url: ""]) {
+                        sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
                     }
                 }
             }
         }
 
-        // Optionnel : ajout de la vérification du Quality Gate
         stage('Vérification Quality Gate') {
             steps {
-                timeout(time: 1, unit: 'MINUTES') {
+                timeout(time: 2, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
