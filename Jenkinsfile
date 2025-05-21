@@ -16,17 +16,16 @@ pipeline {
 
         stage('Analyse SonarQube') {
             options {
-                timeout(time: 10, unit: 'MINUTES') // Timeout généreux pour éviter les blocages
+                timeout(time: 20, unit: 'MINUTES') // Augmenté à 20 minutes
             }
             steps {
                 withSonarQubeEnv('MonServeurSonar') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         script {
-                            // Exécuter l’analyse Sonar avec la variable d’environnement SONAR_TOKEN
-                            sh """
-                                export SONAR_TOKEN=${SONAR_TOKEN}
+                            sh '''#!/bin/bash
+                                export SONAR_TOKEN=$SONAR_TOKEN
                                 ${SONAR_SCANNER}/bin/sonar-scanner
-                            """
+                            '''
                         }
                     }
                 }
@@ -34,6 +33,11 @@ pipeline {
         }
 
         stage('Construire l’image Docker') {
+            when {
+                expression {
+                    fileExists('report-task.txt') // Ne construire que si l'analyse Sonar a fonctionné
+                }
+            }
             steps {
                 script {
                     sh """
@@ -44,6 +48,11 @@ pipeline {
         }
 
         stage('Pousser sur Docker Hub') {
+            when {
+                expression {
+                    fileExists('report-task.txt')
+                }
+            }
             steps {
                 script {
                     withDockerRegistry([credentialsId: "${DOCKER_CREDENTIALS}", url: ""]) {
@@ -54,6 +63,11 @@ pipeline {
         }
 
         stage('Vérification Quality Gate') {
+            when {
+                expression {
+                    fileExists('report-task.txt')
+                }
+            }
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
