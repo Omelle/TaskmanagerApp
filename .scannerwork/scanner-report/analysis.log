@@ -1,0 +1,52 @@
+Plugins:
+Bundled analyzers:
+  - Python Code Quality and Security 4.14.0.14263 (python)
+  - Clean as You Code 2.3.0.1782 (cayc)
+  - XML Code Quality and Security 2.10.0.4108 (xml)
+  - JaCoCo 1.3.0.1538 (jacoco)
+  - PHP Code Quality and Security 3.33.0.11274 (php)
+  - IaC Code Quality and Security 1.26.0.8471 (iac)
+  - Text Code Quality and Security 2.8.0.1635 (text)
+Global server settings:
+  - sonar.azureresourcemanager.file.suffixes=.bicep
+  - sonar.core.id=147B411E-AZbaxazIRQOPt8GB-uHS
+  - sonar.core.startTime=2025-05-21T14:31:32+0000
+  - sonar.cs.file.suffixes=.cs,.razor
+  - sonar.css.file.suffixes=.css,.less,.scss,.sass
+  - sonar.docker.file.patterns=Dockerfile,*.dockerfile
+  - sonar.flex.file.suffixes=as
+  - sonar.forceAuthentication=true
+  - sonar.go.file.suffixes=.go
+  - sonar.html.file.suffixes=.html,.xhtml,.cshtml,.vbhtml,.aspx,.ascx,.rhtml,.erb,.shtm,.shtml,.cmp,.twig
+  - sonar.java.file.suffixes=.java,.jav
+  - sonar.javascript.file.suffixes=.js,.jsx,.cjs,.mjs,.vue
+  - sonar.json.file.suffixes=.json
+  - sonar.jsp.file.suffixes=.jsp,.jspf,.jspx
+  - sonar.kotlin.file.suffixes=.kt,.kts
+  - sonar.php.file.suffixes=php,php3,php4,php5,phtml,inc
+  - sonar.python.file.suffixes=py
+  - sonar.qualityProfiles.allowDisableInheritedRules=true
+  - sonar.ruby.file.suffixes=.rb
+  - sonar.scala.file.suffixes=.scala
+  - sonar.terraform.file.suffixes=.tf
+  - sonar.typescript.file.suffixes=.ts,.tsx,.cts,.mts
+  - sonar.vbnet.file.suffixes=.vb
+  - sonar.xml.file.suffixes=.xml,.xsd,.xsl,.config
+  - sonar.yaml.file.suffixes=.yaml,.yml
+Project server settings:
+Project scanner properties:
+  - sonar.exclusions=**/*.js,**/*.ts
+  - sonar.host.url=http://192.168.33.102:9000
+  - sonar.language=js
+  - sonar.plugins.downloadOnlyRequired=true
+  - sonar.projectBaseDir=/root/TaskManagerApp
+  - sonar.projectKey=taskmanager
+  - sonar.projectName=TaskManager
+  - sonar.projectVersion=1.0
+  - sonar.scanner.app=ScannerCLI
+  - sonar.scanner.appVersion=4.8.0.2856
+  - sonar.sourceEncoding=UTF-8
+  - sonar.sources=backend
+  - sonar.token=******
+  - sonar.verbose=true
+  - sonar.working.directory=/root/TaskManagerApp/.scannerwork

@@ -15,62 +15,44 @@ pipeline {
         }
 
         stage('Analyse SonarQube') {
-            options {
-                timeout(time: 20, unit: 'MINUTES') // Augmenté à 20 minutes
-            }
             steps {
                 withSonarQubeEnv('MonServeurSonar') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         script {
-                            sh '''#!/bin/bash
+                            sh """
                                 export SONAR_TOKEN=$SONAR_TOKEN
                                 ${SONAR_SCANNER}/bin/sonar-scanner
-                            '''
+                            """
                         }
                     }
                 }
             }
         }
 
-        stage('Construire l’image Docker') {
-            when {
-                expression {
-                    fileExists('report-task.txt') // Ne construire que si l'analyse Sonar a fonctionné
+        stage('Vérification Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
+        }
+
+        stage('Construire l’image Docker') {
             steps {
                 script {
                     sh """
-                        docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} -f backend/Dockerfile .
+                        docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
                     """
                 }
             }
         }
 
         stage('Pousser sur Docker Hub') {
-            when {
-                expression {
-                    fileExists('report-task.txt')
-                }
-            }
             steps {
                 script {
                     withDockerRegistry([credentialsId: "${DOCKER_CREDENTIALS}", url: ""]) {
                         sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
                     }
-                }
-            }
-        }
-
-        stage('Vérification Quality Gate') {
-            when {
-                expression {
-                    fileExists('report-task.txt')
-                }
-            }
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
                 }
             }
         }
