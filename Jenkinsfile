@@ -1,59 +1,31 @@
 pipeline {
     agent any
-
-    environment {
-        DOCKER_IMAGE = 'omaelle/tasmanagerapp'
-        DOCKER_CREDENTIALS = 'credential-dockerhub'
-        SONAR_SCANNER = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+    tools {
+        sonarQube 'SonarQube Scanner' // Assurez-vous d'utiliser le nom de l'outil configuré dans Jenkins
     }
-
     stages {
-        stage('Cloner le code') {
+        stage('Build') {
             steps {
-                git branch: 'main', url: 'https://github.com/Omelle/TaskmanagerApp.git'
+                // Exécution de votre build (par exemple Maven, Gradle, etc.)
+                sh 'mvn clean install'  // Si vous utilisez Maven
             }
         }
-
-        stage('Analyse SonarQube') {
+        stage('SonarQube analysis') {
             steps {
-                withSonarQubeEnv('MonServeurSonar') {
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                        script {
-                            sh """
-                                export SONAR_TOKEN=$SONAR_TOKEN
-                                ${SONAR_SCANNER}/bin/sonar-scanner
-                            """
-                        }
+                script {
+                    def scannerHome = tool 'SonarQube Scanner'  // Utilisez le nom de votre configuration SonarQube Scanner
+                    withSonarQubeEnv('SonarQube') {  // Utilisez le nom de votre serveur SonarQube
+                        sh "${scannerHome}/bin/sonar-scanner"
                     }
                 }
             }
         }
-
-        stage('Vérification Quality Gate') {
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
-        stage('Construire l’image Docker') {
-            steps {
-                script {
-                    sh """
-                        docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
-                    """
-                }
-            }
-        }
-
-        stage('Pousser sur Docker Hub') {
-            steps {
-                script {
-                    withDockerRegistry([credentialsId: "${DOCKER_CREDENTIALS}", url: ""]) {
-                        sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
-                    }
-                }
+    }
+    post {
+        always {
+            // Assurez-vous de récupérer les résultats de l'analyse dans un post-steps
+            script {
+                waitForQualityGate abortPipeline: true
             }
         }
     }
