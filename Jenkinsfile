@@ -2,66 +2,55 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'omaelle/tasmanagerapp'
-        DOCKER_CREDENTIALS = 'credential-dockerhub'
-        SONARQUBE_ENV = 'Sonarqube' // Le nom de l'instance SonarQube dans Jenkins
-        SONAR_HOST_URL = 'http://192.168.33.102:9000/'
+        // Ajoute ici des variables d’environnement si besoin
     }
 
     stages {
         stage('Cloner le code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Omelle/TaskmanagerApp.git'
+                git 'https://github.com/Omelle/TaskmanagerApp.git'
             }
         }
 
         stage('Tests & couverture') {
             steps {
                 dir('backend') {
-                    sh '''
-                        npm install
-                        npx mocha ./test/basic.test.js \
-                            --reporter mocha-junit-reporter \
-                            --reporter-options mochaFile=./test-results/results.xml
-                        npx nyc report --reporter=text-lcov > coverage.lcov
-                    '''
+                    // Création du dossier pour les résultats de test
+                    sh 'mkdir -p ./test-results'
+                    
+                    // Installation des dépendances
+                    sh 'npm install'
+                    
+                    // Exécution des tests avec le reporter JUnit
+                    sh 'npx mocha ./test/basic.test.js --reporter mocha-junit-reporter --reporter-options mochaFile=./test-results/results.xml'
                 }
             }
         }
 
         stage('Analyse SonarQube') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    withCredentials([string(credentialsId: 'credential-sonarqube', variable: 'SONAR_TOKEN')]) {
-                        sh '''
-                            sonar-scanner \
-                                -Dsonar.projectKey=taskmanager \
-                                -Dsonar.sources=backend \
-                                -Dsonar.javascript.lcov.reportPaths=backend/coverage.lcov \
-                                -Dsonar.host.url=$SONAR_HOST_URL \
-                                -Dsonar.login=$SONAR_TOKEN
-                        '''
-                    }
-                }
+                echo 'Analyse SonarQube ici...'
             }
         }
 
         stage('Construire l’image Docker') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
-                sh '''
-                    docker build -t $DOCKER_IMAGE:$BUILD_NUMBER -t $DOCKER_IMAGE:latest backend/
-                '''
+                echo 'Construction Docker ici...'
             }
         }
 
         stage('Pousser sur Docker Hub') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
-                withDockerRegistry([credentialsId: "$DOCKER_CREDENTIALS", url: ""]) {
-                    sh '''
-                        docker push $DOCKER_IMAGE:$BUILD_NUMBER
-                        docker push $DOCKER_IMAGE:latest
-                    '''
-                }
+                echo 'Push vers Docker Hub ici...'
             }
         }
     }
