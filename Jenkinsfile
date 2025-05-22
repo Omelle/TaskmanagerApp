@@ -4,6 +4,9 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'omaelle/tasmanagerapp'
         DOCKER_CREDENTIALS = 'credential-dockerhub'
+        SONARQUBE_ENV = 'Sonarqube' // Le nom de l'instance SonarQube dans Jenkins
+        SONARQUBE_TOKEN = credentials('credential-sonarqube') // Jeton SonarQube stocké dans Jenkins
+        SONAR_HOST_URL = 'http://192.168.33.102:9000/'
     }
 
     stages {
@@ -13,10 +16,31 @@ pipeline {
             }
         }
 
+        stage('Tests & couverture') {
+            steps {
+                dir('backend') {
+                    sh '''
+                        npm install
+                        npx mocha ./test/basic.test.js \
+                            --reporter mocha-junit-reporter \
+                            --reporter-options mochaFile=./test-results/results.xml
+                        npx nyc report --reporter=text-lcov > coverage.lcov
+                    '''
+                }
+            }
+        }
+
         stage('Analyse SonarQube') {
             steps {
-                withSonarQubeEnv('SonarQube') { // Assure-toi que ce nom correspond à ce que tu as configuré dans Jenkins
-                    sh 'mvn clean verify sonar:sonar'
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                        sonar-scanner \
+                            -Dsonar.projectKey=taskmanager \
+                            -Dsonar.sources=backend \
+                            -Dsonar.javascript.lcov.reportPaths=backend/coverage.lcov \
+                            -Dsonar.host.url=$SONAR_HOST_URL \
+                            -Dsonar.login=$SONARQUBE_TOKEN
+                    '''
                 }
             }
         }
@@ -24,7 +48,9 @@ pipeline {
         stage('Construire l’image Docker') {
             steps {
                 script {
-                    sh 'docker build -t $DOCKER_IMAGE:$BUILD_NUMBER -f backend/Dockerfile .'
+                    sh '''
+                        docker build -t $DOCKER_IMAGE:$BUILD_NUMBER -t $DOCKER_IMAGE:latest backend/
+                    '''
                 }
             }
         }
@@ -33,19 +59,21 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry([credentialsId: "$DOCKER_CREDENTIALS", url: ""]) {
-                        sh 'docker push $DOCKER_IMAGE:$BUILD_NUMBER'
+                        sh '''
+                            docker push $DOCKER_IMAGE:$BUILD_NUMBER
+                            docker push $DOCKER_IMAGE:latest
+                        '''
                     }
                 }
             }
         }
+    }
 
-        // stage('Déployer sur Kubernetes') {
-        //     steps {
-        //         script {
-        //             sh 'kubectl apply -f k8s/deployment.yaml'
-        //             sh 'kubectl apply -f k8s/service.yaml'
-        //         }
-        //     }
-        // }
+    post {
+        always {
+            script {
+                junit 'backend/test-results/results.xml'
+            }
+        }
     }
 }
