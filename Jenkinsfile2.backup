@@ -1,22 +1,23 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKER_IMAGE = 'omaelle/tasmanagerapp:latest'
-    }
-
     stages {
         stage('Cloner le code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Omelle/TaskmanagerApp.git'
+                 git branch: 'main', url: 'https://github.com/Omelle/TaskmanagerApp.git'
             }
         }
 
         stage('Tests & couverture') {
             steps {
                 dir('backend') {
+                    // Création du dossier pour les résultats de test
                     sh 'mkdir -p ./test-results'
+                    
+                    // Installation des dépendances
                     sh 'npm install'
+                    
+                    // Exécution des tests avec le reporter JUnit
                     sh 'npx mocha ./test/basic.test.js --reporter mocha-junit-reporter --reporter-options mochaFile=./test-results/results.xml'
                 }
             }
@@ -36,7 +37,7 @@ pipeline {
                 expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
             }
             steps {
-                sh 'docker build -t $DOCKER_IMAGE .'
+                echo 'Construction Docker ici...'
             }
         }
 
@@ -45,12 +46,7 @@ pipeline {
                 expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
             }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'credential-dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $DOCKER_IMAGE
-                    '''
-                }
+                echo 'Push vers Docker Hub ici...'
             }
         }
     }
