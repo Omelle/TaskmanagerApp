@@ -4,13 +4,20 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'omaelle/tasmanagerapp'
         DOCKER_CREDENTIALS = 'credential-dockerhub'
-        // KUBE_CONFIG = '/root/.kube/config' // Chemin vers ton fichier kubeconfig
     }
 
     stages {
         stage('Cloner le code') {
             steps {
                 git branch: 'main', url: 'https://github.com/Omelle/TaskmanagerApp.git'
+            }
+        }
+
+        stage('Analyse SonarQube') {
+            steps {
+                withSonarQubeEnv('SonarQube') { // Assure-toi que ce nom correspond à ce que tu as configuré dans Jenkins
+                    sh 'mvn clean verify sonar:sonar'
+                }
             }
         }
 
@@ -39,6 +46,6 @@ pipeline {
         //             sh 'kubectl apply -f k8s/service.yaml'
         //         }
         //     }
-        // ici}
+        // }
     }
 }
