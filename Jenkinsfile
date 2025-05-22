@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        // Ajoute ici des variables d’environnement si besoin
-    }
-
     stages {
         stage('Cloner le code') {
             steps {
